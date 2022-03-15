@@ -9,6 +9,18 @@ module.exports.getUserById = async (id) => {
     return User.findById({_id: id});
 }
 
+module.exports.getUsers = async () => {
+    return User.find();
+}
+
+module.exports.updateUserPermissions = async (id, permission) => {
+    await User.findByIdAndUpdate(id, {permission: permission})
+}
+
+module.exports.deleteUser = async (id) => {
+    await User.findByIdAndDelete(id)
+}
+
 module.exports.updateUser = async (user, data) => {
     const {surName, firstName, middleName, avatar, newPassword} = data;
     if (surName) user.surName = surName;
@@ -43,4 +55,22 @@ module.exports.createUser = async (data) => {
 
 module.exports.getNews = async () => {
     return await News.find();
+}
+
+module.exports.createNews = async ({text, title, user}) => {
+    const news = new News({
+        text,
+        title,
+        user
+    })
+    await news.save();
+    return news;
+}
+
+module.exports.deleteNews = async (id) => {
+    await News.findByIdAndDelete(id);
+}
+
+module.exports.updateNews = async (id, title, text) => {
+    await News.findByIdAndUpdate(id, {title: title, text: text})
 }

@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../models');
 const helper = require('../helper/serialize');
 const passport = require('passport');
-const token = require('../auth/tokens')
+const token = require('../auth/tokens');
 
 router.post('/registration', async (req, res) => {
     const { username } = req.body;
@@ -99,7 +99,45 @@ router.patch('/profile', auth, async (req, res) => {
 })
 
 router.get('/news', async (req, res) => {
-    return await db.getNews()
+    const news = await db.getNews();
+    return res.json(news.map(news => helper.serializeNews(news)))
+})
+
+router.post('/news', auth, async (req, res) => {
+    const {title, text} = req.body;
+    const user = helper.serializeUser(req.user);
+    await db.createNews({title, text, user});
+    const news = await db.getNews();
+    return res.json(news.map(news => helper.serializeNews(news)))
+})
+
+router.delete('/news/:id', auth, async (req, res) => {
+    await db.deleteNews(req.params.id)
+    const news = await db.getNews();
+    return res.json(news.map(news => helper.serializeNews(news)))
+})
+
+router.patch('/news/:id', auth, async (req, res) => {
+    await db.updateNews(req.params.id, req.body.title, req.body.text)
+    const news = await db.getNews();
+    return res.json(news.map(news => helper.serializeNews(news)))
+})
+
+router.get('/users', auth, async (req, res) => {
+    const users = await db.getUsers();
+    return res.json(users.map(user => helper.serializeUser(user)))
+})
+
+router.patch('/users/:id/permission', auth, async (req, res) => {
+    await db.updateUserPermissions(req.params.id, req.body.permission);
+    const users = await db.getUsers();
+    return res.json(users.map(user => helper.serializeUser(user)))
+})
+
+router.delete('/users/:id', auth, async (req, res) => {
+    await db.deleteUser(req.params.id)
+    const users = await db.getUsers();
+    return res.json(users.map(user => helper.serializeUser(user)))
 })
 
 module.exports = router

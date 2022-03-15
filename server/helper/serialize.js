@@ -9,3 +9,13 @@ module.exports.serializeUser = (user) => {
         username: user.username
     }
 }
+
+module.exports.serializeNews = (news) => {
+    return {
+        id: news._id,
+        created_at: news.created_at,
+        text: news.text,
+        title: news.title,
+        user: news.user,
+    }
+}
