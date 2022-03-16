@@ -21,14 +21,14 @@ module.exports.deleteUser = async (id) => {
     await User.findByIdAndDelete(id)
 }
 
-module.exports.updateUser = async (user, data) => {
+module.exports.updateUser = async function (user, data) {
     const {surName, firstName, middleName, avatar, newPassword} = data;
     if (surName) user.surName = surName;
     if (firstName) user.firstName = firstName;
     if (middleName) user.middleName = middleName;
-    if (avatar) user.image = avatar;
+    user.image = avatar;
     if (newPassword) {
-        user.hash = user.setPassword(newPassword);
+        await user.setPassword(newPassword);
     }
     await user.save();
     return user;

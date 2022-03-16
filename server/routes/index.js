@@ -4,6 +4,7 @@ const db = require('../models');
 const helper = require('../helper/serialize');
 const passport = require('passport');
 const token = require('../auth/tokens');
+const formidabale = require('formidable')
 
 router.post('/registration', async (req, res) => {
     const { username } = req.body;
@@ -78,24 +79,29 @@ router.get('/profile', auth, async (req, res) => {
 })
 
 router.patch('/profile', auth, async (req, res) => {
-    const user = await db.getUserByName(req.user.username);
-    if (req.oldPassword && req.newPassword) {
-        if (!user.validPassword(req.oldPassword)) {
-            res.status(409).json({
-                message: "Старый пароль неверен"
-            })
+    const form = new formidabale.IncomingForm();
+    form.parse(req, async (err, fields, files) => {
+        const {firstName, surName, middleName, oldPassword, newPassword} = fields;
+        const avatar = fields.avatar === 'null' ? '' : fields.avatar;
+        const user = await db.getUserByName(req.user.username);
+        if (oldPassword && newPassword) {
+            if (!user.validPassword(oldPassword)) {
+                res.status(409).json({
+                    message: "Старый пароль неверен"
+                })
+            } else {
+                const updatedUser = await db.updateUser(user, {surName, firstName, middleName, avatar, newPassword})
+                res.json({
+                    ...helper.serializeUser(updatedUser)
+                })
+            }
         } else {
-            const updatedUser = await db.updateUser(user, req.body)
+            const updatedUser = await db.updateUser(user, {surName, firstName, middleName, avatar})
             res.json({
                 ...helper.serializeUser(updatedUser)
             })
         }
-    } else {
-        const updatedUser = await db.updateUser(user, req.body)
-        res.json({
-            ...helper.serializeUser(updatedUser)
-        })
-    }
+    })
 })
 
 router.get('/news', async (req, res) => {
