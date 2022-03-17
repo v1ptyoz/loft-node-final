@@ -4,7 +4,11 @@ const db = require('../models');
 const helper = require('../helper/serialize');
 const passport = require('passport');
 const token = require('../auth/tokens');
-const formidabale = require('formidable')
+const formidable = require('formidable')
+const path = require('path')
+const fs = require('fs')
+
+const UPLOAD_DIR = path.join(process.cwd(), 'server/upload');
 
 router.post('/registration', async (req, res) => {
     const { username } = req.body;
@@ -79,10 +83,16 @@ router.get('/profile', auth, async (req, res) => {
 })
 
 router.patch('/profile', auth, async (req, res) => {
-    const form = new formidabale.IncomingForm();
+    const form = new formidable.IncomingForm();
+    form.uploadDir = UPLOAD_DIR;
     form.parse(req, async (err, fields, files) => {
         const {firstName, surName, middleName, oldPassword, newPassword} = fields;
-        const avatar = fields.avatar === 'null' ? '' : fields.avatar;
+        let avatar = null
+        if (Object.entries(files).length > 0) {
+            const ext = files.avatar.originalFilename.split('.')[files.avatar.originalFilename.split('.').length-1]
+            fs.renameSync(path.join(UPLOAD_DIR, files.avatar.newFilename), path.join(UPLOAD_DIR, files.avatar.newFilename + `.${ext}`))
+            avatar = files.avatar.newFilename + `.${ext}`
+        }
         const user = await db.getUserByName(req.user.username);
         if (oldPassword && newPassword) {
             if (!user.validPassword(oldPassword)) {
