@@ -1,6 +1,5 @@
 const User = require('./schemas/users');
 const News = require('./schemas/news');
-const Messages = require('./schemas/messages');
 
 module.exports.getUserByName = async (username) => {
     return User.findOne({ username })
@@ -74,39 +73,4 @@ module.exports.deleteNews = async (id) => {
 
 module.exports.updateNews = async (id, title, text) => {
     await News.findByIdAndUpdate(id, { title: title, text: text })
-}
-
-module.exports.getMessagesBySenderIdAndRecipientId = async (senderId, recipientId) => {
-    const record = await Messages.findOne({ "sender": senderId, "recipient": recipientId })
-    return record;
-}
-
-module.exports.createSenderAndPutMessage = async (senderId, recipientId, roomId, text) => {
-    const sender = new Messages({
-        sender: senderId,
-        recipient: recipientId,
-        data: {
-            senderId,
-            recipientId,
-            roomId,
-            messages: []
-        }
-    })
-    sender.data.messages.push(text);
-    await sender.save();
-    return sender;
-}
-
-module.exports.addMessageForSender = async (senderId, recipientId, roomId, text) => {
-    const record = await Messages.findOne({ "sender": senderId, "recipient": recipientId, "data.roomId": roomId });
-    record.data.messages.push(text);
-    await record.save();
-    return record;
-}
-
-module.exports.dropAllMessages = async () => {
-    const messages = await Messages.find();
-    messages.forEach(async message => {
-        await Messages.findByIdAndDelete(message._id)
-    })
 }

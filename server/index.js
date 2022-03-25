@@ -31,48 +31,54 @@ server.listen(PORT, async function () {
 })
 
 const connectedUsers = {};
+const historyMessage = {};
 
 io.on("connection", (socket) => {
-    const socketId = socket.id;
+  const socketId = socket.id;
 
-    socket.on("users:connect", (data) => {
-        const user = { ...data, activeRoom: null, socketId };
-        connectedUsers[socketId] = user;
+  socket.on("users:connect", (data) => {
+    const user = { ...data, activeRoom: null, socketId };
+    connectedUsers[socketId] = user;
+    console.log(connectedUsers);
 
-        socket.emit("users:list", Object.values(connectedUsers));
-        socket.broadcast.emit("users:add", user);
-    });
+    socket.emit("users:list", Object.values(connectedUsers));
+    socket.broadcast.emit("users:add", user);
+  });
 
-    socket.on("message:add", (data) => {
-        const { senderId, recipientId, roomId, text } = data;
-        socket.emit("message:add", data);
-        socket.broadcast.to(roomId).emit("message:add", data);
-        addMessageHistory(senderId, recipientId, roomId, text);
-        if (senderId !== recipientId) {
-            addMessageHistory(recipientId, senderId, roomId, text)
-        }
-    });
+  socket.on("message:add", (data) => {
+    const { senderId, recipientId, roomId } = data;
+    socket.emit("message:add", data);
+    socket.broadcast.to(roomId).emit("message:add", data);
+    addMessageHistory(senderId, recipientId, data);
+    if (senderId !== recipientId) {
+        addMessageHistory(recipientId, senderId, data)
+    }
+  });
 
-    socket.on("disconnect", () => {
-        delete connectedUsers[socketId];
-        socket.broadcast.emit("users:leave", socketId);
-    });
+  socket.on("disconnect", () => {
+    delete connectedUsers[socketId];
+    socket.broadcast.emit("users:leave", socketId);
+  });
 
-    socket.on("message:history", async (data) => {
-        const { userId, recipientId } = data;
-        const record = await db.getMessagesBySenderIdAndRecipientId(userId, recipientId);
-        if (record && record.data.messages.length > 0) {
-            socket.emit("message:history", record.data.messages)
-        }
-    });
+  socket.on("message:history", (data) => {
+    const { userId, recipientId } = data;
+    if (historyMessage[userId] && historyMessage[userId][recipientId]) {
+      socket.emit("message:history", historyMessage[userId][recipientId]);
+    }
+  });
 });
 
-async function addMessageHistory(senderId, recipientId, roomId, text) {
-    const record = await db.getMessagesBySenderIdAndRecipientId(senderId, recipientId);
-    if (record) {
-        await db.addMessageForSender(senderId, recipientId, roomId, text);
+function addMessageHistory(senderId, recipientId, data) {
+  if (historyMessage[senderId]) {
+    if (historyMessage[senderId][recipientId]) {
+      historyMessage[senderId][recipientId].push(data);
+    } else {
+      historyMessage[senderId][recipientId] = [];
+      historyMessage[senderId][recipientId].push(data);
     }
-    else {
-        await db.createSenderAndPutMessage(senderId, recipientId, roomId, text)
-    }
+  } else {
+    historyMessage[senderId] = {};
+    historyMessage[senderId][recipientId] = [];
+    historyMessage[senderId][recipientId].push(data);
+  }
 }
